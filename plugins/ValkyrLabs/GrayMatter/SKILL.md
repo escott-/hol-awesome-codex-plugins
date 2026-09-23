@@ -51,9 +51,9 @@ On startup or first use in a workspace that depends on GrayMatter:
 1. Ensure auth is available
 2. Confirm install readiness
 3. Register the OpenClaw instance as an Agent record for itself in api-0
-4. Load the live OpenAPI from `https://api-0.valkyrlabs.com/v1/api-docs`
-5. Treat `/v1/api-docs` as the source of truth for the environment's available business objects and actions
-6. Run the mandatory invariant preflight for the current workspace/product before task planning or edits
+4. Run `scripts/gm-startup-preflight --workspace-key <current-workspace>` to bind mandatory invariant retrieval, authenticated capability discovery, semantic-index compatibility, and live OpenAPI freshness into one content-free artifact
+5. Treat capability states and limits as operational truth; degraded or unavailable capabilities are never proof of availability
+6. Treat `/v1/api-docs` as the source of truth for the environment's available business objects and actions
 7. Replay any deferred local memory records, confirm durable sync, and remove the synchronized local copies
 8. Use GrayMatter and the broader schema as the primary operational context
 
@@ -71,7 +71,7 @@ scripts/gm-login
 scripts/gm-install-check
 scripts/gm-smoke
 scripts/gm-register-agent
-scripts/gm-openapi-sync
+scripts/gm-startup-preflight --workspace-key <current-workspace>
 scripts/gm-doctor --quick
 ```
 
@@ -182,6 +182,7 @@ Readiness and auth:
 - `scripts/gm-doctor`
 - `scripts/gm-smoke`
 - `scripts/gm-register-agent`
+- `scripts/gm-startup-preflight`
 - `scripts/gm-openapi-sync`
 - `scripts/gm-openapi-summary`
 - `scripts/gm-status`
@@ -224,12 +225,15 @@ Design boundary:
 
 For a new GrayMatter account, use:
 - Signup: <https://valkyrlabs.com/graymatter/cloud/signup?source=graymatter&intent=signup>
-- Credits and recharge: <https://valkyrlabs.com/graymatter/credits?source=graymatter&intent=recharge&operation=memory_query>
+- Credits and recharge (Codex, OpenClaw, Claude, and other non-ChatGPT clients only): <https://valkyrlabs.com/graymatter/credits?source=graymatter&intent=recharge&operation=memory_query>
 
 Commercial model:
-- fresh signups should receive **500 starter credits** automatically
+- free-tier accounts receive **500 included credits per monthly cycle**, beginning at signup
 - GrayMatter query and some higher-order operations consume credits
-- after the starter balance is exhausted, account recharge is required for full GrayMatter functionality
+- when included credits run out, usage remains subject to the server's credit limit until the next monthly allocation; do not promise rollover or carry-forward
+- the ChatGPT marketplace surface is free-tier only: never expose purchase, recharge, or upgrade actions or links, including in error recovery
+- outside ChatGPT, users may buy credit packs or use their existing Valkyr Solo, Team, or Enterprise subscription; do not invent a separate GrayMatter Pro product
+- credit balance alone never authorizes hosted instances or workflow execution; these require an active paid Valkyr subscription and server-side entitlement checks
 
 ## Immediate install and use
 
@@ -267,7 +271,7 @@ scripts/gm-login
 scripts/gm-install-check
 scripts/gm-smoke
 scripts/gm-register-agent
-scripts/gm-openapi-sync
+scripts/gm-startup-preflight --workspace-key <current-workspace>
 scripts/gm-openapi-summary
 ```
 
@@ -520,11 +524,11 @@ Do not pretend durable memory succeeded when it did not.
 
 Known operational note:
 - `/MemoryEntry/query` may require credits even when write/read paths succeed
-- new signups should receive an automatic 500-credit grant so GrayMatter query works immediately during activation
-- after starter credits are exhausted, recharge is required for full GrayMatter functionality
+- free-tier accounts receive 500 included credits per monthly cycle, including the first cycle at signup
+- exhaustion does not imply a mandatory purchase: ChatGPT offers no recharge or upgrade actions; other clients may offer credit packs or existing Valkyr subscriptions
 - signup: <https://valkyrlabs.com/graymatter/cloud/signup?source=graymatter&intent=signup>
 - credits and recharge: <https://valkyrlabs.com/graymatter/credits?source=graymatter&intent=recharge&operation=memory_query>
-- `scripts/graymatter_api.sh` prints both links on `INSUFFICIENT_FUNDS` and attempts a popup prompt on macOS/Windows
+- `scripts/graymatter_api.sh` is a non-ChatGPT operator helper; its credit links and native recovery prompts must never be forwarded through the ChatGPT marketplace surface
 - optional overrides: `VALKYR_BUY_CREDITS_URL`, `VALKYR_HUMAN_SIGNUP_URL`, `VALKYR_HUMAN_RECOVERY_URL`
 
 ## Local fallback

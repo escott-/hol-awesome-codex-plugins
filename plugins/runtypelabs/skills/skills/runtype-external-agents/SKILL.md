@@ -1,13 +1,6 @@
 ---
 name: runtype-external-agents
-description: >-
-  Use when an agent runs outside Runtype's hosted execution (Flue, the Cloudflare Agents
-  SDK, Vercel AI SDK, LangChain, or a custom loop) and the user wants Runtype's
-  observability, traces, eval capture, Persona chat, surfaces, or the trace-to-eval
-  improvement loop for it. Covers OpenTelemetry/OTLP ingest, @runtypelabs/flue-otel vs
-  @flue/opentelemetry, Flue on Cloudflare Workers, telemetry API keys, registering a
-  runtype-stream or A2A endpoint so Runtype can call the agent, and which features each
-  path unlocks. Not for agents Runtype itself executes.
+description: 'Connect externally executed agents (Flue, Cloudflare Agents SDK, Vercel AI SDK, LangGraph, custom loops) to Runtype traces, evals, or surfaces; not Runtype-hosted execution.'
 user-invocable: true
 argument-hint: '[framework and what you want from Runtype: traces, evals, chat UI]'
 ---
@@ -73,9 +66,13 @@ content on by default). Export to Runtype:
 
 To keep prompts and tool payloads out of the export, add
 `instrument(createCloudflareTracing({ content: false }))` from `@flue/runtime/cloudflare`
-at module scope in `app.ts`, and tell the user this also removes eval capture. Cloudflare
-Agents SDK and Think apps use the same destination; Think stores no payloads unless the
-agent class sets `storeMessages = true` and `storeTools = true`.
+at module scope in `app.ts`, and tell the user this also removes eval capture. Think apps
+use the same destination and store no payloads unless the agent class sets
+`storeMessages = true` and `storeTools = true`.
+
+**Cloudflare Agents SDK (`agents`): dedicated adapter beta, release pending.** Do not recommend an npm install or dashboard chip yet. The adapter is acceptance-gated. Once released, it wraps the application's one `streamText` call with `observeStreamTextOptions`, sends observations through `createDurableObserver`, and uses a separate SQLite Durable Object (`RuntypeOtlpOutbox`) for session state, immutable batches, retries, and alarms. It sends OTLP directly to Runtype; it does not need a Workers Observability destination. The app supplies stable submission and conversation IDs plus the SDK request ID as the exchange ID, and keeps `RUNTYPE_AGENT_ID`, `RUNTYPE_API_KEY`, and `RUNTYPE_BASE_URL` as Worker-only bindings.
+
+All adapter content is off by default. `messages`, `instructions`, `tools`, and `errors` are separate opt-ins; system/developer messages need `instructions`, and tool arguments/results need `tools`. A redactor runs before storage and transmission. Structural tool-call identity and duration remain metadata when tool payloads are off. The companion reports only observed terminal facts: cancellation is `cancelled`; missing terminal or delivery failure is incomplete, never successful. Do not promise approval continuations, client tools, subagent trees, native-trace association, or hosted approval/resume controls. Preserve application `abortSignal`, `onFinish`, `onError`, and `prepareStep` callbacks when wrapping stream options; the pinned compatibility fixture uses `agents@0.22.0`, `@cloudflare/ai-chat@0.11.0`, and `ai@6.0.277`. Native Cloudflare traces may remain enabled for infrastructure diagnostics in Logs, and their Workers Observability route can retain native read-only approval history, but it is separate from the adapter lifecycle and cannot authorize or resume an approval.
 
 **Flue on Node / Cloud Run / anywhere else.** Point exactly ONE Flue instrumentation at
 Runtype (two would double tokens and cost):
@@ -92,7 +89,8 @@ The app owns the OTel SDK: `NodeTracerProvider` + `BatchSpanProcessor` +
 `OTLPTraceExporter({ url: 'https://api.runtype.com/v1/otel/v1/traces', headers: { Authorization: 'Bearer ' + key } })`,
 `provider.register()` (otherwise every span is its own trace), attribution via
 `runtypeFlueResourceAttributes({ agentId })` or the `x-runtype-agent-id` header, and
-`await provider.forceFlush()` before a serverless handler returns. Node 22+.
+`await provider.forceFlush()` before a serverless handler returns. The app also installs
+`@flue/runtime` itself, whose engine floor is Node 22.19+.
 
 **Any OpenTelemetry-instrumented agent.** Stock env vars, HTTP only:
 
@@ -103,9 +101,15 @@ OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 ```
 
 Runtype reads `gen_ai.operation.name` = `invoke_agent` / `chat` / `execute_tool` (an HTTP
-root span above them is fine) and the GenAI content attributes. Attribution per trace:
-`runtype.agent.id` resource attribute → `x-runtype-agent-id` header → `runtype.agent.id`
-on the `invoke_agent` span. One agent invocation per trace.
+root span above them is fine) and the GenAI content attributes. Any nonempty
+`gen_ai.operation.name` preserves trace projection, including a producer-specific operation.
+Attribution per trace: `runtype.agent.id` resource attribute → `x-runtype-agent-id` header →
+`runtype.agent.id` on the `invoke_agent` span. One agent invocation per trace.
+
+For OTLP traces, content fidelity (t1) reflects content present on the run. It can return
+to baseline (t0) if later spans show that content belongs to another invocation or contradict earlier
+data. Accepted Runtype-extension evidence (t2) is retained even if other content becomes invalid.
+Neither tier guarantees complete telemetry.
 
 ## Lane B recipe
 
@@ -155,8 +159,13 @@ a capability, or `generate_persona_embed_code` for a chat widget.
   returns `200 {}` when key and endpoint are right; `403` means the key lacks
   `TELEMETRY:WRITE`.
 - Run stuck "in flight": the closing `invoke_agent` span was never flushed.
-- `ambiguous_agent_attribution` or no run at all: two invocations in one trace, or no
-  attribution source; set the resource attribute or header.
+- `ambiguous_agent_attribution`: two invocations in one trace, or no attribution source;
+  set the resource attribute or header.
+- No Run after an attributed export: no GenAI operation, model or inference signal,
+  or recognized Runtype execution telemetry. Runtype retains the trace as a
+  diagnostic in Logs.
+- `500` while exporting a diagnostic trace: Runtype could not retain it durably.
+  Retry the export; Runtype has not accepted the trace.
 - Doubled tokens and cost: two instrumentations export to the same endpoint.
 - "No tool content in this trace": content capture is off on the producer.
 - `partial_success` in the exporter log: some traces named an agent the key cannot use.

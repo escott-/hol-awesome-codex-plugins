@@ -9,7 +9,7 @@
   <a href="https://github.com/epicsagas/Velith/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/epicsagas/Velith?style=for-the-badge&labelColor=0d1117&color=58a6ff&logo=git&logoColor=white" /></a>
 </p>
 <p>
-  <a href=".claude-plugin/plugin.json"><img alt="Version" src="https://img.shields.io/badge/version-0.7.0-fc8d62?style=for-the-badge&labelColor=0d1117" /></a>
+  <a href=".claude-plugin/plugin.json"><img alt="Version" src="https://img.shields.io/badge/version-0.7.1-fc8d62?style=for-the-badge&labelColor=0d1117" /></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache--2.0-3fb950?style=for-the-badge&labelColor=0d1117" /></a>
   <a href="https://claude.ai/code"><img alt="Claude Code" src="https://img.shields.io/badge/Claude_Code-plugin-bc8cff?style=for-the-badge&labelColor=0d1117" /></a>
   <a href="https://github.com/openai/codex"><img alt="Codex CLI" src="https://img.shields.io/badge/Codex_CLI-plugin-10a37f?style=for-the-badge&labelColor=0d1117" /></a>
@@ -104,19 +104,17 @@ Velith provides 18 skills and 12 custom subagents (`.codex-plugin/agents/*.toml`
 ### Grok Build (xAI)
 
 ```bash
+grok plugin marketplace add epicsagas/plugins
+grok plugin install velith@epicsagas --trust
+```
+
+Or install directly from this repository without registering the marketplace:
+
+```bash
 grok plugin install epicsagas/Velith --trust
 ```
 
-Grok reads skills from `skills/` and agents from `agents/` at the plugin root. No extra configuration needed. Agents spawn as `velith:<name>` (for example `velith:chapter-writer`).
-
-Alternatively, add this repository as a marketplace:
-
-```bash
-grok plugin marketplace add epicsagas/Velith
-grok plugin install velith --trust
-```
-
-Updates with `grok plugin update velith`.
+Grok reads skills from `skills/` and agents from `agents/` at the plugin root. No extra configuration needed. Agents spawn as `velith:<name>` (for example `velith:chapter-writer`). Updates with `grok plugin update velith@epicsagas`.
 
 **Prerequisites:** [Grok Build](https://x.ai/cli) installed and authenticated.
 

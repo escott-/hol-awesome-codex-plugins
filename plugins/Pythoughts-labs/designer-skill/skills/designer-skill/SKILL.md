@@ -69,7 +69,7 @@ With the designer MCP connected, call `get_preflight_brief({})`, then `load_proj
 
 **3. Route the task and load only relevant references.**
 
-Use `dispatch_intent({"request": REQUEST})` or `get_command({"verb": CANONICAL_VERB})`. Validate explicit verbs against the command registry. Load references with `get_reference({"name": REFERENCE_NAME})`; without MCP, read the equivalent local files.
+Use `dispatch_intent({"request": REQUEST})` or `get_command({"verb": CANONICAL_VERB})`. Validate explicit verbs against the command registry. Load references with `get_reference({"name": REFERENCE_NAME})`; ux-designer references use the `ux/` namespace. For contemporary real-screen context, `find_ui_references` and `get_design_reference` search the optional niblet.com catalogue (requires NIBLET_TOKEN; unconfigured calls return setup guidance, and results are advisory, never a style mandate). Without MCP, read the equivalent local files.
 
 | Concern | Existing reference files |
 |---|---|
