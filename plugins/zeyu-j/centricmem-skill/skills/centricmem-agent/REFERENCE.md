@@ -198,7 +198,7 @@ If `cm_*` are missing, mint `/connect?device=` this turn. Paste-key fallback may
 
 **OpenClaw.** Compatible **bundle** (Agent Plugins / `.claude-plugin` / `.codex-plugin` / `.cursor-plugin`). Not a native in-process plugin — do not add `openclaw.plugin.json`. Not ClawHub. `openclaw plugins install git:github.com/zeyu-j/centricmem-skill` or `openclaw plugins install centricmem-skill --marketplace zeyu-j/centricmem-skill`. Restart the gateway if tools stay missing. Then the same connect as other plugin clients.
 
-**DSH.** Cordis **funnel** only. Needs `pnpm` on PATH (`npm i -g pnpm` if missing; `corepack enable pnpm` fails on Windows Program Files). Pin: `dsh plugin --profile web add github:zeyu-j/centricmem-skill#v0.21.72`. That mounts URL-only `@deepseek-ai/dsh-mcp-client` from `dsh/cordis.patch.yml` (`failOnStartupError: true` — missing Bearer aborts boot, it does not register 0 tools). The Skill stays PolyForm; the patch is MIT glue. The funnel does **not** load SKILL.md from `node_modules`: from the profile dir run `node node_modules/centricmem-skill/dsh/copy-skill.mjs` so `$DSH_HOME/skills/centricmem-agent/` exists. Never `npx skills add -g` (writes `~/.agents`, not `$DSH_HOME`). Overlay Bearer in `$DSH_HOME/profiles/<profile>/cordis.patch.yml` after `/connect?device=` — **same** `id: mcp-centricmem`, restate the whole `config` (`serverName: centricmem`, `transport`, `url`, `headers`). A typo in `serverName` creates a second namespace. Never commit headers. Tools appear as `mcp__centricmem__cm_*` — call those names, not bare `cm_*`. After overlay: **new chat** (mandatory; this session’s catalog is frozen). DSH does not speak MCP OAuth. `session.v3.jsonl.zstd` is not a keep source — skip `cm_keep`; still file note / decision / done. GitHub topic `dsh-plugin` is discovery.
+**DSH.** Cordis **funnel** only. Needs `pnpm` on PATH (`npm i -g pnpm` if missing; `corepack enable pnpm` fails on Windows Program Files). Pin: `dsh plugin --profile web add github:zeyu-j/centricmem-skill#v0.21.72`. That mounts URL-only `@deepseek-ai/dsh-mcp-client` from `dsh/cordis.patch.yml` (`failOnStartupError: true` — missing Bearer aborts boot, it does not register 0 tools). The Skill is MIT from 1.0.7; the patch is MIT glue. The funnel does **not** load SKILL.md from `node_modules`: from the profile dir run `node node_modules/centricmem-skill/dsh/copy-skill.mjs` so `$DSH_HOME/skills/centricmem-agent/` exists. Never `npx skills add -g` (writes `~/.agents`, not `$DSH_HOME`). Overlay Bearer in `$DSH_HOME/profiles/<profile>/cordis.patch.yml` after `/connect?device=` — **same** `id: mcp-centricmem`, restate the whole `config` (`serverName: centricmem`, `transport`, `url`, `headers`). A typo in `serverName` creates a second namespace. Never commit headers. Tools appear as `mcp__centricmem__cm_*` — call those names, not bare `cm_*`. After overlay: **new chat** (mandatory; this session’s catalog is frozen). DSH does not speak MCP OAuth. `session.v3.jsonl.zstd` is not a keep source — skip `cm_keep`; still file note / decision / done. GitHub topic `dsh-plugin` is discovery.
 
 ### 1Password (optional vault, not a connect path)
 
@@ -378,6 +378,27 @@ Cursor already writes `~/.cursor/projects/<workspace>/agent-transcripts/<uuid>/<
 Claude Code, Codex, Hermes, Pi, OpenClaw, Kiro, Kilo, Copilot, and other Agent Skills clients: only keep a transcript if that runtime actually wrote a local **plaintext** file for **this** chat. If there is no file, say so; do not invent a dump. Never paste the bytes into chat. DSH stores `session.v3.jsonl.zstd` (compressed) — that is not a keep source; skip `cm_keep` and still file note / decision / done.
 
 ## Optional host hooks
+
+**Where the close half works, and where it does not.** The SessionEnd hook calls
+`centricmem log-session --auto`, which is a **host-side** command: on a guest it stops with "this command cannot
+write the leftover hub" and points at import or the MCP tools instead. So on a machine that talks to a hosted
+librarian the hook is silent, and the card is filed by the **agent**, which is what the Skill already requires
+anyway. The hook was left alone rather than making it post a card itself: a hook cannot read the session, and
+this project's own rule is that a card's summary states the key points, not a placeholder. Cursor's installed
+hooks have the same shape and the same boundary - they file on a librarian host and fall silent elsewhere.
+
+Per-host extras live in folders named after the host. Check yours before assuming there is nothing here:
+
+| Folder | Who it is for | What is in it |
+|---|---|---|
+| `hooks/` | Claude Code, Codex | `hooks.json`: a SessionStart hook that puts this shelf's context in front of the model, and a SessionEnd hook that files the unit when the session ends |
+| `goose/` | goose | recipes for a preflight and a close, plus a MOIM refresher that writes the file goose injects each turn |
+| `openclaw/` | OpenClaw | a hook pack (`HOOK.md` + handler) that contributes the same context |
+| `tools/ambient.mjs` | anything with Node | the one implementation the three wrappers above call |
+
+Hosts not named here need nothing extra: the Skill plus the host MCP tools is the whole integration. Cursor is
+in that position with a twist - `centricmem setup --install-hooks` writes the equivalent pair into a code
+repository, so a Cursor session refreshes itself and files its own card.
 
 Lifecycle hooks are **optional**. The baseline is this Skill plus the MCP tools: an agent with no hooks still files normally. Ask if you need the hook design.
 

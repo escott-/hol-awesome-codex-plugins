@@ -171,13 +171,13 @@
     },
     {
       "name": "Archcore",
-      "url": "https://github.com/archcore-ai/plugin",
+      "url": "https://github.com/archcore-ai/archcore",
       "owner": "archcore-ai",
-      "repo": "plugin",
+      "repo": "archcore",
       "description": "Spec-driven development and context engineering for Claude Code, Cursor, Codex, and GitHub Copilot — backed by project context in Git.",
       "category": "Development & Workflow",
       "source": "awesome-codex-plugins",
-      "install_url": "https://raw.githubusercontent.com/archcore-ai/plugin/HEAD/plugins/archcore/.codex-plugin/plugin.json"
+      "install_url": "https://raw.githubusercontent.com/archcore-ai/archcore/HEAD/plugins/archcore/.codex-plugin/plugin.json"
     },
     {
       "name": "ArmorCodex",

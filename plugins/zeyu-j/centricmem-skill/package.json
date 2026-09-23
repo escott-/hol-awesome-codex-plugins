@@ -1,10 +1,10 @@
 {
   "name": "centricmem-skill",
-  "version": "1.0.6",
+  "version": "1.0.12",
   "private": true,
   "description": "CentricMem Agent Skill package for the hosted librarian. GitHub package name centricmem-skill; skill folder centricmem-agent. Install: npx skills add zeyu-j/centricmem-skill --skill centricmem-agent -y",
-  "license": "PolyForm-Noncommercial-1.0.0",
-  "author": "Dr. Z <zeyu@dr.com>",
+  "license": "MIT",
+  "author": "Dr. Z <zeyu@poppyg.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/zeyu-j/centricmem-skill.git"

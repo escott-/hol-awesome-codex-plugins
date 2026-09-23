@@ -1,10 +1,10 @@
 ---
 name: centricmem-agent
 description: "Organises and retrieves Markdown memory on the hosted CentricMem librarian (search, notes, decisions, transcripts). Use when starting a session, resuming after context compress / checkpoint / new chat, filing Non-Micro work, searching project memory, connecting an agent key, or refreshing this Skill. On session start, compare the loaded copy (see REFERENCE Skill refresh) against cm_health / ambient skill_latest and refresh if stale."
-license: PolyForm-Noncommercial-1.0.0
-compatibility: "Requires host MCP at https://mem.centricmem.com/mcp. CLI >=0.21.50: every card is summary + key points (a keep stub is not a card); a folder is cm_keep card:false then cm_import items. Archive zip is optional. share: shelf ids; cm_move selected cards (whole paths, not lessons.md or #); cm_delete {file,shelf} a card (heading= for ##); cm_rename {file,shelf,title} a card. Omit cm_library id to list. Codex OAuth needs librarian >=0.21.51. OAuth key picker / ChatGPT Approve hop: librarian >=0.21.56. Applicant HTTPS callbacks: librarian >=0.21.55. skipExisting / copy-aside FTS skip need librarian >=0.21.50."
+license: MIT
+compatibility: "Requires host MCP at https://mem.centricmem.com/mcp. CLI >=0.21.50: every card is summary + key points (a keep stub is not a card); a folder is cm_keep card:false then cm_import items. Archive zip is optional. share: shelf ids; cm_move selected cards (whole paths, not lessons.md or #); cm_delete {file,shelf} a card (heading= for ##); cm_rename {file,shelf,title} a card. Omit cm_library id to list. Codex OAuth needs librarian >=0.21.51. OAuth key picker / ChatGPT Approve hop: librarian >=0.21.56. Applicant HTTPS callbacks: librarian >=0.21.55. skipExisting / copy-aside FTS skip need librarian >=0.21.50. Host-ops detail (cm_ops) needs librarian >=1.0.6."
 metadata:
-  version: "1.0.6"
+  version: "1.0.12"
   compatible_cli: ">=0.21.50"
   changelog_url: https://github.com/zeyu-j/centricmem-skill/blob/main/CHANGELOG.md
 ---
@@ -35,7 +35,7 @@ Start or resume; search; file Non-Micro; connect / refresh Skill. Recipes: REFER
 1. MCP only `https://mem.centricmem.com/mcp`: `cm_health` `cm_ambient` `cm_doctor` `cm_search` `cm_show` `cm_note` `cm_log_decision` `cm_done` `cm_keep` `cm_library` `cm_copy` `cm_move` `cm_delete` `cm_rename` `cm_import` `cm_index`. No curl / CLI-write / bootstrap.
 2. Missing tools or short grants → **connect this turn**. REFERENCE **Reach**. Remote/cloud is **not** “paste key only”: OAuth if this agent receives the browser login; paste Bearer only when it cannot. Listed OAuth hosts only: an unlisted callback shape leaves the host stuck on “connecting”, so prefer `/connect?device=` and send that callback shape to zeyu@poppyg.com (REFERENCE “Approved, but the agent stays connecting”).
    Tools that were there and then vanished, or a load-time `discover` failure, mean the MCP **session** died, not the key: probe with `centricmem doctor` (its own request, unaffected by the session), re-handshake (goose: disable then enable centricmem, or restart the host), retry once. While the session is dead, nothing here is loaded either.
-3. `cm_show` = card on the **hosted** shelf (not a local junction file). `grants=["*"]` = default. Extra `mode=read` = view-only (search/show only). `ACADEMIC.md` beside this → follow it. Upsert corpus paths: REFERENCE **Import shapes** (`bundle.imported` + `rel_path`, never bare `items=`).
+3. `cm_show` = card on the **hosted** shelf (not a local junction file). `grants=["*"]` = default. Extra `mode=read` = view-only (search/show only). `ACADEMIC.md` beside this → follow it. Upsert corpus paths: REFERENCE **Import shapes** (`bundle.imported` + `rel_path`, never bare `items=`). Host-specific install, refresh or failure detail: `cm_ops` - read it when a host detail actually blocks you (librarian >=1.0.6; it is served on request rather than shipped in every copy).
 4. **Writes — `items=` and `bundle` are different contracts.** `cm_note` / `cm_log_decision` / `cm_done` file cards; `cm_import` with `items=` (or `package.items`, or a zip) adds **new cards under `imported/kept/`** and nothing else. `cm_import` with **`bundle: {version: 1, …}`** is the full ImportBundle and **also writes library files**: `context` → the shelf's **`active_context.md`** (current focus, overwritten), `rules` → **`AGENTS.md` Global Rules**, plus `decisions` / `lessons` / `sessions` / `imported` / `research`. A key that can open the shelf can write those — it is **not** host-only. An unknown or mistyped top-level slot is **`400 BAD_IMPORT_BUNDLE`** (it names the slot and the allowed list), never a silent drop. Slot table: REFERENCE **Writes**.
 
 ## 1. Classify
@@ -80,14 +80,6 @@ MCP down: hold **CentricMem deferred sweep**; connect (REFERENCE); file after he
 1. Transcript plaintext exists → Shell-read → `cm_keep` (no paste / `path=`). Else skip keep.
 2. Same batch: `cm_note` / `cm_log_decision` / `cm_done` (+ `attach`) as needed.
 3. Copy/move/delete/rename leftovers: REFERENCE Writes.
-
-## 5. Optional host hooks
-
-**Baseline = this Skill + host MCP (`cm_*`).** Hooks / `AGENTS.md` / Stop scripts are **optional enhancements**, not install prerequisites.
-
-- No hook support (DSH, some cloud agents) → still full use: §2 ambient, §4 sweep. Missing hooks is not an error.
-- This Skill does **not** require hook config; hooks do **not** replace §4 (scripts default to session-only; knowledge cards still need the model + this Skill).
-- Install recipes (private client `integrations/`): L1 `AGENTS.md` snippet, L2 Stop remind (Cursor / Claude / Codex), L3 session-sweep (guest HTTP Bearer). Details: REFERENCE **Optional host hooks**.
 
 ## Typical Workflows
 

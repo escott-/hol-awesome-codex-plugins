@@ -246,7 +246,7 @@
       "displayName": "Archcore",
       "source": {
         "source": "local",
-        "path": "./plugins/archcore-ai/plugin"
+        "path": "./plugins/archcore-ai/archcore"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -254,7 +254,7 @@
       },
       "category": "Development & Workflow",
       "description": "Spec-driven development and context engineering for Claude Code, Cursor, Codex, and GitHub Copilot — backed by project context in Git.",
-      "icon": "./plugins/archcore-ai/plugin/assets/icon.png"
+      "icon": "./plugins/archcore-ai/archcore/assets/icon.png"
     },
     {
       "name": "armorcodex",
