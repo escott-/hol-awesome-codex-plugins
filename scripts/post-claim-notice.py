@@ -25,6 +25,8 @@ PR_NUMBER = os.environ.get("PR_NUMBER", "")
 PR_TITLE = os.environ.get("PR_TITLE", "")
 PR_AUTHOR = os.environ.get("PR_AUTHOR", "")
 REPO_FULL = os.environ.get("GITHUB_REPOSITORY", "")
+PENDING_RETRY = os.environ.get("PENDING_RETRY") == "1"
+PENDING_LABEL = "registry-claim-pending"
 
 # Skip titles that aren't new plugin additions
 SKIP_PATTERNS = [
@@ -139,21 +141,25 @@ def fetch_catalog_repos(owner_verified: bool = False):
     base_url = f"{REGISTRY_API}/plugins/catalog?limit=50"
     if owner_verified:
         base_url += "&ownerVerified=true"
-    url = base_url
-    for _ in range(10):
-        if cursor:
-            url = f"{base_url}&cursor={cursor}"
+    seen_cursors = set()
+    while True:
+        url = f"{base_url}&cursor={cursor}" if cursor else base_url
         data = api_request(url)
         if not data or "items" not in data:
-            break
+            raise RuntimeError("Registry catalog is unavailable; claim notice will be retried")
         for plugin in data["items"]:
-            repo = plugin.get("sourceRepo") or plugin.get("repository") or ""
-            repo = repo.replace("https://github.com/", "").strip()
+            # Vendored marketplace plugins have a catalog sourceRepo of
+            # awesome-codex-plugins; ownership belongs to the author repo.
+            repo = plugin.get("repository") or plugin.get("sourceRepo") or ""
+            repo = normalize_repo_url(repo) if repo else ""
             if repo:
                 repos.add(repo.lower())
         cursor = data.get("nextCursor")
         if not cursor:
             break
+        if cursor in seen_cursors:
+            raise RuntimeError("Registry catalog cursor repeated; claim notice will be retried")
+        seen_cursors.add(cursor)
     return repos
 
 
@@ -206,19 +212,37 @@ def parse_pr_diff_for_repos():
 
 def has_existing_claim_comment():
     """Check if the PR already has a claim-notice or manual claim comment."""
-    url = f"https://api.github.com/repos/{REPO_FULL}/issues/{PR_NUMBER}/comments"
     headers = {"Authorization": f"token {GH_TOKEN}"}
-    comments = api_request(url, headers=headers)
-    if not isinstance(comments, list):
-        return False
-    for comment in comments:
-        body = comment.get("body") or ""
-        if MARKER in body:
-            return True
-        # Also detect manual claim comments posted before automation
-        if "Claim your plugin" in body and "hol.org/guard/plugins" in body:
-            return True
-    return False
+    page = 1
+    state = None
+    while True:
+        url = f"https://api.github.com/repos/{REPO_FULL}/issues/{PR_NUMBER}/comments?per_page=100&page={page}"
+        comments = api_request(url, headers=headers)
+        if not isinstance(comments, list):
+            raise RuntimeError("Cannot check existing claim notices; retry later")
+        for comment in comments:
+            body = comment.get("body") or ""
+            if MARKER in body:
+                if "Registry sync in progress" in body:
+                    state = "pending"
+                else:
+                    return "ready"
+            # Also detect manual claim comments posted before automation
+            if "Claim your plugin" in body and "hol.org/guard/plugins" in body:
+                return "ready"
+        if len(comments) < 100:
+            break
+        page += 1
+    return state
+
+
+def set_pending_label(pending: bool):
+    """Keep an indefinite retry queue on the merged PR itself."""
+    subprocess.run(
+        ["gh", "pr", "edit", PR_NUMBER, "--repo", REPO_FULL,
+         "--add-label" if pending else "--remove-label", PENDING_LABEL],
+        check=True, timeout=30, env={**os.environ, "GH_TOKEN": GH_TOKEN},
+    )
 
 
 def post_comment(author: str, registry_ready: bool = True):
@@ -246,7 +270,7 @@ def main():
     print(f'PR #{PR_NUMBER}: "{PR_TITLE}" by @{PR_AUTHOR}')
 
     # 1. Skip non-plugin PRs
-    if should_skip_title(PR_TITLE):
+    if not PENDING_RETRY and should_skip_title(PR_TITLE):
         print("  Skipping: non-plugin PR title pattern")
         return 0
 
@@ -254,12 +278,7 @@ def main():
         print("  Skipping: bot/owner PR")
         return 0
 
-    # 2. Check for existing claim comment
-    if has_existing_claim_comment():
-        print("  Skipping: claim notice already posted")
-        return 0
-
-    # 3. Parse PR diff for GitHub repo URLs
+    # 2. Parse PR diff for GitHub repo URLs
     try:
         pr_repos = parse_pr_diff_for_repos()
     except subprocess.CalledProcessError as e:
@@ -274,6 +293,13 @@ def main():
         return 0
 
     print(f"  Found repos in diff: {', '.join(pr_repos)}")
+
+    set_pending_label(True)
+    existing_notice = has_existing_claim_comment()
+    if existing_notice and existing_notice != "pending":
+        set_pending_label(False)
+        print("  Skipping: claim-ready notice already posted")
+        return 0
 
     # 4. Fetch all registry plugins
     print("  Fetching registry catalog...")
@@ -294,9 +320,11 @@ def main():
                 print(f"  Found in README (pending registry sync): {', '.join(readme_matched)}")
                 matched = readme_matched
             else:
+                set_pending_label(False)
                 print("  Skipping: none of the PR repos are in the registry or README")
                 return 0
         else:
+            set_pending_label(False)
             print("  Skipping: README.md not found and repos not in registry")
             return 0
 
@@ -311,15 +339,22 @@ def main():
         verified_repos = fetch_catalog_repos(owner_verified=True)
         already_verified = matched & verified_repos
         if already_verified and len(already_verified) == len(matched):
+            set_pending_label(False)
             print("  Skipping: all matched repos already owner-verified")
             return 0
 
         if already_verified:
             print(f"  Some already verified: {', '.join(already_verified)}")
 
-    # 7. Post the comment. Pending repos get sync-status copy, not a claim-now assertion.
+    if existing_notice == "pending" and not registry_ready:
+        print("  Skipping: registry sync notice already posted; retrying later")
+        return 0
+
+    # 7. Post the claim-ready notice once ingestion completes.
     print("  Posting claim notice comment...")
     if post_comment(PR_AUTHOR, registry_ready=registry_ready):
+        if registry_ready:
+            set_pending_label(False)
         print("  ✅ Comment posted successfully")
         return 0
     else:
