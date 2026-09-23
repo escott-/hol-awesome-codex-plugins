@@ -128,7 +128,7 @@ After **Approve**, Codex on this machine waits on `http://127.0.0.1:<port>/callb
 3. Before they try OAuth at all, know which shape needs permission: a **loopback** callback (`http://127.0.0.1:<any port>/<any path>` or `localhost`) is accepted as it stands - it is never "unlisted", so do not send the human to email one. Only an **HTTPS/remote** callback that is not a documented host (Cursor, Claude, Codex / ChatGPT connectors) needs verifying first, per host, at /oauth/callbacks. Where that is missing, prefer `/connect?device=`.
 4. Do not guess a callback URL, do not paste a redirect into chat as if it were verified, and do not retry the same OAuth flow in a loop - a retry restarts the wait.
 
-Hermes `~/.hermes/config.yaml` — mint `/connect?device=` first when `cm_*` are missing. OAuth (`auth: oauth`; tokens land in `~/.hermes/mcp-tokens/`) only after that mint fails, and only if this Hermes will receive the browser login:
+Hermes `<HERMES_HOME>/config.yaml` — `HERMES_HOME` wins, else the platform default, which on Windows is `%LOCALAPPDATA%\hermes` and on macOS/Linux `~/.hermes`. A `~/.hermes/config.yaml` is silently ignored when the default points elsewhere, as it does on Windows; `hermes hooks list` prints the file it actually loaded. Mint `/connect?device=` first when `cm_*` are missing. OAuth (`auth: oauth`; tokens land under `<HERMES_HOME>/mcp-tokens/`) only after that mint fails, and only if this Hermes will receive the browser login:
 
 ```yaml
 mcp_servers:
@@ -392,9 +392,13 @@ Per-host extras live in folders named after the host. Check yours before assumin
 | Folder | Who it is for | What is in it |
 |---|---|---|
 | `hooks/` | Claude Code, Codex | `hooks.json`: a SessionStart hook that puts this shelf's context in front of the model, and a SessionEnd hook that files the unit when the session ends |
+| `.zcode-plugin/` or the Claude Code marketplace | ZCode | its CLI is `zcode plugins marketplace add …` + `zcode plugins install …`; MCP is Settings → MCP Servers (stdio, HTTP, SSE) |
+| `dsh/` | DeepSeek Harness | skills come from `~/.agents/skills`; its Claude Code hooks bridge runs `hooks/hooks.json` with `pluginRoot` |
+| `qwen/` | Qwen Code | hooks in `.qwen/settings.json`; `SessionStart` adds context via `hookSpecificOutput.additionalContext` |
 | `goose/` | goose | recipes for a preflight and a close, plus a MOIM refresher that writes the file goose injects each turn |
 | `openclaw/` | OpenClaw | a hook pack (`HOOK.md` + handler) that contributes the same context |
-| `tools/ambient.mjs` | anything with Node | the one implementation the three wrappers above call |
+| `hermes/` | Hermes | a shell hook that injects the shelf's context on `pre_llm_call` and files the unit on `on_session_end`. It carries its own copy of the fetch: Hermes runs it from `<HERMES_HOME>/agent-hooks`, outside this package |
+| `tools/ambient.mjs` | anything with Node | the one implementation the three wrappers above call — `hermes/` is the exception, and says why |
 
 Hosts not named here need nothing extra: the Skill plus the host MCP tools is the whole integration. Cursor is
 in that position with a twist - `centricmem setup --install-hooks` writes the equivalent pair into a code
@@ -414,3 +418,21 @@ Lifecycle hooks are **optional**. The baseline is this Skill plus the MCP tools:
 - Stop after a titled keep stub or a title-only card — every card needs a summary and key points in the body
 - Treat this git checkout as the memory disk
 - Write `unclassified` — pick or create a named shelf. Writes without one are 400 `LIBRARY_REQUIRED`.
+
+## Host-side checklist (hand this to the host, not to us)
+
+A host that reports a broken MCP connection usually has one of these, and none of them are fixable from the librarian:
+
+- **"Connected" must mean "callable".** Discovery and invocation have to share one handshake; when they disagree the state should read *degraded* with a one-click restart, not *connected*.
+- **A secret written by the host must reach the process that uses it.** After a key is stored, the current session and its MCP child processes need the new value (or the host must say "restart MCP"). A stale environment is indistinguishable from a user pasting the old key.
+- **Print three fingerprints on demand** - stored secret, process env, and which credential type the MCP call actually used (Bearer or OAuth) - prefix plus fingerprint only, never the secret.
+- **Keep `mcp-remote: Unauthorized` and "the key is wrong" apart.** The first is usually a stale local bridge token: re-authorize, clear `.mcp-auth`, or switch to HTTP.
+- **Per-session MCP bridges need to be resettable.** When an old long-running session stops answering but a fresh probe reaches the server, the fix is "reset this chat's MCP", not a machine update.
+
+What we can report is now in `cm_health` and `cm_doctor`: `auth=oauth|bearer|missing` and `keyFp` (12 hex, the same value the new-network notices show), so a host's fingerprints can be compared with ours instead of guessed. The librarian cannot report a *transport*: stdio is a client-side choice and every hosted call is HTTP.
+
+## One core, one source
+
+A machine with several agents ends up with this Skill more than once: the open skills CLI always writes a canonical copy into the shared hub (`~/.agents/skills`), while a host that installs the package as a plugin keeps its own copy. Nothing is broken by that, but a host can then show two `centricmem-agent` entries and load the stale one - ZCode did exactly that, and Codex, Hermes and a private desktop agent of ours have all been seen holding a copy of their own.
+
+So: **keep the newest copy and remove the older ones** - a plugin copy that your host actually loads is the one to refresh when it lags, and the hub copy is the fallback for hosts that cannot take a plugin. What matters is that one of them is current, and that a host is not left choosing between two. `cm_doctor` now reports every copy it can see (`skill_copies`), and `node tools/prune-duplicate-skill.mjs` prints the plan - it only ever removes centricmem copies, keeps the newest, and does nothing without `--apply`.

@@ -1,10 +1,13 @@
 ---
 name: centricmem-agent
 description: "Organises and retrieves Markdown memory on the hosted CentricMem librarian (search, notes, decisions, transcripts). Use when starting a session, resuming after context compress / checkpoint / new chat, filing Non-Micro work, searching project memory, connecting an agent key, or refreshing this Skill. On session start, compare the loaded copy (see REFERENCE Skill refresh) against cm_health / ambient skill_latest and refresh if stale."
+requirements:
+  mcps:
+    - centricmem
 license: MIT
-compatibility: "Requires host MCP at https://mem.centricmem.com/mcp. CLI >=0.21.50: every card is summary + key points (a keep stub is not a card); a folder is cm_keep card:false then cm_import items. Archive zip is optional. share: shelf ids; cm_move selected cards (whole paths, not lessons.md or #); cm_delete {file,shelf} a card (heading= for ##); cm_rename {file,shelf,title} a card. Omit cm_library id to list. Codex OAuth needs librarian >=0.21.51. OAuth key picker / ChatGPT Approve hop: librarian >=0.21.56. Applicant HTTPS callbacks: librarian >=0.21.55. skipExisting / copy-aside FTS skip need librarian >=0.21.50. Host-ops detail (cm_ops) needs librarian >=1.0.6."
+compatibility: "Requires host MCP at https://mem.centricmem.com/mcp. Floors use the pre-1.0 0.21.x numbering; every 1.0.x satisfies them all. librarian >=0.21.50: a card is summary + key points (a keep stub is not a card); a folder is cm_keep card:false then cm_import items; archive zip is optional; share: shelf ids; cm_move takes whole paths (never lessons.md or #); cm_delete {file,shelf} a card, heading= for one ##; cm_rename {file,shelf,title}; omitting the cm_library id lists shelves; skipExisting and copy-aside FTS skip. >=0.21.51 Codex OAuth. >=0.21.55 applicant HTTPS callbacks. >=0.21.56 OAuth key picker and the ChatGPT Approve hop. >=1.0.6 host-ops detail (cm_ops)."
 metadata:
-  version: "1.0.12"
+  version: "1.0.31"
   compatible_cli: ">=0.21.50"
   changelog_url: https://github.com/zeyu-j/centricmem-skill/blob/main/CHANGELOG.md
 ---
@@ -24,7 +27,7 @@ Handover (when / loop). Schemas win. Branches: [REFERENCE.md](REFERENCE.md).
 - Never echo a credential value. Confirm a key with a fingerprint, not the value (`9352... len=64 fp=5E4ED29C`); never dump `mcp.json` / `config.toml` / `*.env` whole, and never redact by length threshold (short keys slip through). If a key reaches the transcript, say so in that turn and rotate it. Details: REFERENCE **Never echo a credential (agent side)**.
 - Don't stop after a title-only card — every card needs summary + key points
 - Don't treat this git checkout as the memory disk
-- Don't let a dead session pass for a key problem: a transport failure gets the re-handshake path (section 0), and a refusal (401/403) gets the rotation path - different causes, different fixes
+- Don't let a dead session pass for a key problem: a transport failure gets the re-handshake path (section 0), and a refusal (401/403) gets the rotation path - different causes, different fixes, and never call a key unrotated from the store alone: compare three fingerprints first - the card, the process env, and whether this host is on OAuth at all.
 
 ## When to Use
 
@@ -51,7 +54,7 @@ Prefer `cm_ambient` with **`shelf=`** (or `library=`) first — it already carri
 
 **Resume = new session.** Compress, checkpoint restore, or new chat on same task → ambient first (health only if needed).
 
-Once after ambient (or health): refresh if `skill_latest` newer. **Load path ≠ refresh path** — read the version of the copy **this host loads**, not a sibling skills dir (plugin-tree hosts: `<host-plugins-dir>/centricmem-skill/package.json`; npx `-g` / `~/.agents` does not update that tree). Install morphologies + hosts outside them: REFERENCE Skill refresh — adapt, do not invent a fourth shared hub. After a disk refresh: **re-read this SKILL.md and Do not** before the next write — installing newer ≠ acting on it. Name the key once (`mode=read` → view-only). Don't log → skip sweep. Empty shelf once: REFERENCE Existing memory.
+Once after ambient (or health): refresh if `skill_latest` newer. **Load path ≠ refresh path** — read the version of the copy **this host loads**, not a sibling skills dir (plugin-tree hosts: `<host-plugins-dir>/centricmem-skill/package.json`; npx `-g` / `~/.agents` does not update that tree). Install morphologies + hosts outside them: REFERENCE Skill refresh — adapt, do not invent a fourth shared hub. After a disk refresh: **re-read this SKILL.md and Do not** before the next write — installing newer ≠ acting on it. Name the key once (`mode=read` → view-only). Don't log → skip sweep. Empty shelf once: REFERENCE Existing memory
 
 ## 3. During
 

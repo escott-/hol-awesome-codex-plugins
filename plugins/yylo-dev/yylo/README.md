@@ -80,13 +80,13 @@ Next: [run an agent](#beginner-agent-workflow), [manage a typed task](#typed-tas
 
 YYLO skill content is versioned independently in the public
 [`yylo-dev/yylo-skills`](https://github.com/yylo-dev/yylo-skills) repository and
-is not bundled in `@yylo/cli`. This CLI requires stable skills `^2.0.2`, declared
+is not bundled in `@yylo/cli`. This CLI requires stable skills `^2.0.4`, declared
 in `package.json` as `yyloSkills.version`. Install the latest compatible stable
 release, or pin an exact compatible version:
 
 ```bash
 yy skills install
-yy skills install --version 2.0.2
+yy skills install --version 2.0.4
 yy skills update
 yy skills status
 ```
@@ -345,7 +345,9 @@ continuation; do not automatically reset or replay historical attempts.
 
 ### Choose Simple or Advanced
 
-For a new project, run `git init`, then `yy init`. The final question selects:
+For a new Simple project, run `git init`, then `yy init --mode simple` to
+initialize immediately. Add `--directory PATH` to select an existing Git root.
+For guided setup, `yy init` asks a final mode question:
 
 - **Simple (recommended to start):** code, notebooks, notes and Ledger in one
   checkout. Agents share files; `yy task local` is bookkeeping, not delivery.
@@ -354,8 +356,10 @@ For a new project, run `git init`, then `yy init`. The final question selects:
 
 Use `yy init --interactive --mode simple` to skip the mode question. Inline
 initialization retains Advanced behavior; `yy init "Build an API" --mode advanced`
-makes that explicit. Existing `yy init --mode simple` automation still previews a
-plan; use `--plan-file` then `--apply-plan` to initialize without interaction.
+makes that explicit. **Plain `yy init --mode simple` now writes files**, without
+confirmation or an external plan. Existing preview automation must add `--dry-run`
+(zero writes) or use optional `--plan-file` then `--apply-plan` for reviewed plans.
+Initialization installs no dependencies and does not certify agent readiness.
 Normal initialization does not convert existing workspaces. For a settled registered
 metadata-only controller, preview then apply a fresh Advanced → Simple copy:
 
