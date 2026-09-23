@@ -67,7 +67,9 @@ If they are missing: **Already added** a Bearer or finished OAuth login in this 
 
 **First connect, this same reply** sends https://centricmem.com/login?signup=1 **and** tries to send a `/connect?device=` URL **and** tells them to save a backup of the key — Keys shows it only once; never paste it here. Plugin `mcp.json` is URL-only: it is **not** a completed connect. **This agent** (and each client you install into) mints that connect URL this turn when it can.
 
-**If minting that URL fails:** prefer the no-CLI path first. **Shell works, `centricmem` missing** (no Node / no CLI): do **not** run `doctor connect` — follow the POST `/connect/device` branch immediately below. **`centricmem` on PATH:** run `centricmem doctor connect` and tell them to email zeyu@poppyg.com with that output (which agent; never a key). Do not email on their behalf. **Then MCP OAuth** only if this agent will receive the login after they finish a browser prompt: add `https://mem.centricmem.com/mcp` **with no Bearer**. Cursor may use Add to Cursor on https://centricmem.com (URL only, then the same prompt). Codex on this machine: `codex mcp add centricmem --url https://mem.centricmem.com/mcp` then `codex mcp login centricmem`. Hermes: `hermes mcp add --url https://mem.centricmem.com/mcp --auth oauth centricmem` (or `auth: oauth` in `~/.hermes/config.yaml`). Cloud agents that can have them operate a browser this agent is waiting on (Grok Bot, Manus, Cursor Cloud, Claude) may use that same URL-only add. **Do not skip `/connect?device=` because OAuth exists.** Do not send a Loopback `127.0.0.1` authorize link when this agent is not listening there. Do not curl OAuth or librarian HTTP. Do not download or open a settings file that contains a key, and do not ask them to send you that path. A URL-only `mcp.json` or Codex `config.toml` (url, no `Authorization`) may be copied or opened. After they finish the prompt, retry `cm_health`. Still failing, or a usage problem you cannot fix: they email zeyu@poppyg.com (never a key). Do not email on their behalf.
+**If minting that URL fails:** prefer the no-CLI path first. **Detail on demand.** Host-specific install, refresh, sandbox and failure detail is not shipped in this copy: read `cm_ops` with the MCP tools, or ask zeyu@poppyg.com. The rules and shapes below are what you need to connect and to stay safe.
+
+**Shell works, `centricmem` missing** (no Node / no CLI): do **not** run `doctor connect` — follow the POST `/connect/device` branch immediately below. **`centricmem` on PATH:** run `centricmem doctor connect` and tell them to email zeyu@poppyg.com with that output (which agent; never a key). Do not email on their behalf. **Then MCP OAuth** only if this agent will receive the login after they finish a browser prompt: add `https://mem.centricmem.com/mcp` **with no Bearer**. Cursor may use Add to Cursor on https://centricmem.com (URL only, then the same prompt). Codex on this machine: `codex mcp add centricmem --url https://mem.centricmem.com/mcp` then `codex mcp login centricmem`. Hermes: `hermes mcp add --url https://mem.centricmem.com/mcp --auth oauth centricmem` (or `auth: oauth` in `~/.hermes/config.yaml`). Cloud agents that can have them operate a browser this agent is waiting on (Grok Bot, Manus, Cursor Cloud, Claude) may use that same URL-only add. **Do not skip `/connect?device=` because OAuth exists.** Do not send a Loopback `127.0.0.1` authorize link when this agent is not listening there. Do not curl OAuth or librarian HTTP. Do not download or open a settings file that contains a key, and do not ask them to send you that path. A URL-only `mcp.json` or Codex `config.toml` (url, no `Authorization`) may be copied or opened. After they finish the prompt, retry `cm_health`. Still failing, or a usage problem you cannot fix: they email zeyu@poppyg.com (never a key). Do not email on their behalf.
 
 **Shell blocked** (Grok Bot, some web bots): minting `device=` failed. Send signup, tell them to email zeyu@poppyg.com with that error (never a key), then OAuth if this agent will receive a browser login they can finish (Grok Bot / Manus may). Otherwise they paste Bearer **only** in this agent’s MCP / plugin settings (`https://mem.centricmem.com/mcp`). Never here.
 
@@ -137,29 +139,11 @@ mcp_servers:
 
 Same as `hermes mcp add --url https://mem.centricmem.com/mcp --auth oauth centricmem`. Use that OAuth block only after `/connect?device=` minting failed and this Hermes will receive the browser login. When OAuth is unavailable, device-connect then Bearer. In **docs / install plans / git**, prefer an env placeholder — never a literal hex:
 
-```yaml
-mcp_servers:
-  centricmem:
-    url: "https://mem.centricmem.com/mcp"
-    headers:
-      Authorization: "Bearer ${CENTRICMEM_API_KEY}"
-```
+Hermes with a key instead of OAuth: the same yaml with `headers.Authorization: "Bearer \${CENTRICMEM_API_KEY}"`.
 
 Other agents (`mcp.json`) paste-key fallback (same rule — placeholder in shareable text; host may expand from env):
 
-```json
-{
-  "mcpServers": {
-    "centricmem": {
-      "type": "http",
-      "url": "https://mem.centricmem.com/mcp",
-      "headers": {
-        "Authorization": "Bearer ${CENTRICMEM_API_KEY}"
-      }
-    }
-  }
-}
-```
+Any other `mcp.json` host: the canonical object above plus `headers.Authorization = "Bearer \${CENTRICMEM_API_KEY}"`. Placeholder in shareable text; the host writes the real value.
 
 **Bearer: where plaintext is OK vs not.** These are different layers — do not treat them as a conflict.
 

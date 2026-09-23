@@ -4,12 +4,12 @@ description: "Organises and retrieves Markdown memory on the hosted CentricMem l
 license: PolyForm-Noncommercial-1.0.0
 compatibility: "Requires host MCP at https://mem.centricmem.com/mcp. CLI >=0.21.50: every card is summary + key points (a keep stub is not a card); a folder is cm_keep card:false then cm_import items. Archive zip is optional. share: shelf ids; cm_move selected cards (whole paths, not lessons.md or #); cm_delete {file,shelf} a card (heading= for ##); cm_rename {file,shelf,title} a card. Omit cm_library id to list. Codex OAuth needs librarian >=0.21.51. OAuth key picker / ChatGPT Approve hop: librarian >=0.21.56. Applicant HTTPS callbacks: librarian >=0.21.55. skipExisting / copy-aside FTS skip need librarian >=0.21.50."
 metadata:
-  version: "1.0.5"
+  version: "1.0.6"
   compatible_cli: ">=0.21.50"
   changelog_url: https://github.com/zeyu-j/centricmem-skill/blob/main/CHANGELOG.md
 ---
 
-# CentricMem Agent Skill v1.0.2
+# CentricMem Agent Skill
 
 **Names:** product/CLI = `centricmem`; GitHub install package = `centricmem-skill`; this Agent Skill folder = `centricmem-agent` (keep that folder name — it is not a second product).
 Handover (when / loop). Schemas win. Branches: [REFERENCE.md](REFERENCE.md).
@@ -24,6 +24,7 @@ Handover (when / loop). Schemas win. Branches: [REFERENCE.md](REFERENCE.md).
 - Never echo a credential value. Confirm a key with a fingerprint, not the value (`9352... len=64 fp=5E4ED29C`); never dump `mcp.json` / `config.toml` / `*.env` whole, and never redact by length threshold (short keys slip through). If a key reaches the transcript, say so in that turn and rotate it. Details: REFERENCE **Never echo a credential (agent side)**.
 - Don't stop after a title-only card — every card needs summary + key points
 - Don't treat this git checkout as the memory disk
+- Don't let a dead session pass for a key problem: a transport failure gets the re-handshake path (section 0), and a refusal (401/403) gets the rotation path - different causes, different fixes
 
 ## When to Use
 
@@ -33,6 +34,7 @@ Start or resume; search; file Non-Micro; connect / refresh Skill. Recipes: REFER
 
 1. MCP only `https://mem.centricmem.com/mcp`: `cm_health` `cm_ambient` `cm_doctor` `cm_search` `cm_show` `cm_note` `cm_log_decision` `cm_done` `cm_keep` `cm_library` `cm_copy` `cm_move` `cm_delete` `cm_rename` `cm_import` `cm_index`. No curl / CLI-write / bootstrap.
 2. Missing tools or short grants → **connect this turn**. REFERENCE **Reach**. Remote/cloud is **not** “paste key only”: OAuth if this agent receives the browser login; paste Bearer only when it cannot. Listed OAuth hosts only: an unlisted callback shape leaves the host stuck on “connecting”, so prefer `/connect?device=` and send that callback shape to zeyu@poppyg.com (REFERENCE “Approved, but the agent stays connecting”).
+   Tools that were there and then vanished, or a load-time `discover` failure, mean the MCP **session** died, not the key: probe with `centricmem doctor` (its own request, unaffected by the session), re-handshake (goose: disable then enable centricmem, or restart the host), retry once. While the session is dead, nothing here is loaded either.
 3. `cm_show` = card on the **hosted** shelf (not a local junction file). `grants=["*"]` = default. Extra `mode=read` = view-only (search/show only). `ACADEMIC.md` beside this → follow it. Upsert corpus paths: REFERENCE **Import shapes** (`bundle.imported` + `rel_path`, never bare `items=`).
 4. **Writes — `items=` and `bundle` are different contracts.** `cm_note` / `cm_log_decision` / `cm_done` file cards; `cm_import` with `items=` (or `package.items`, or a zip) adds **new cards under `imported/kept/`** and nothing else. `cm_import` with **`bundle: {version: 1, …}`** is the full ImportBundle and **also writes library files**: `context` → the shelf's **`active_context.md`** (current focus, overwritten), `rules` → **`AGENTS.md` Global Rules**, plus `decisions` / `lessons` / `sessions` / `imported` / `research`. A key that can open the shelf can write those — it is **not** host-only. An unknown or mistyped top-level slot is **`400 BAD_IMPORT_BUNDLE`** (it names the slot and the allowed list), never a silent drop. Slot table: REFERENCE **Writes**.
 
@@ -71,7 +73,7 @@ No wrap-up wait. Agent close does not run this. Don't log / Skill done → skip.
 
 Same `lessons.md` title → 409; rewrite = `cm_delete` then write (REFERENCE). Early wrong write costs more.
 
-MCP down: hold **CentricMem deferred sweep**; connect (REFERENCE); file after health.
+MCP down: hold **CentricMem deferred sweep**; connect (REFERENCE); file after health. Say so once, keep working without memory, and never fake a card, pick a local hub, or treat a leftover copy of the hub as the shelf.
 
 `shelf=` / `library=` (REFERENCE **Shelf routing**):
 
